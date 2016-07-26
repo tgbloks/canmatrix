@@ -64,6 +64,7 @@ def importDbc(filename, **options):
         l = line.strip()
         if l.__len__() == 0:
             continue
+        print( 'line: ', l )
         if followUp == FollowUps.signalComment:
             try:
                 comment += "\n" + l.decode(dbcCommentEncoding).replace('\\"','"')
@@ -329,7 +330,6 @@ def importDbc(filename, **options):
         elif decoded.startswith("BA_ "):
             regexp = re.compile("^BA\_ +\"[A-Za-z0-9\-_]+\" +(.+)")
             tempba = regexp.match(decoded)
-
             if tempba.group(1).strip().startswith("BO_ "):
                 regexp = re.compile("^BA\_ \"(.*)\" BO\_ (\w+) (.+);")
                 temp = regexp.match(decoded)

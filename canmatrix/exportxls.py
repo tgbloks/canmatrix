@@ -44,10 +44,14 @@ sty_white    = xlwt.easyxf(font + ', colour white')
 # BUMatrix-Styles
 sty_green = xlwt.easyxf('pattern: pattern solid, fore-colour light_green')
 sty_green_first_frame = xlwt.easyxf('pattern: pattern solid, fore-colour light_green; borders: top thin')
+sty_blue = xlwt.easyxf('pattern: pattern solid, fore-colour light_blue')
+sty_blue_first_frame = xlwt.easyxf('pattern: pattern solid, fore-colour light_blue; borders: top thin')
 sty_sender = xlwt.easyxf('pattern: pattern 0x04, fore-colour gray25')
 sty_sender_first_frame = xlwt.easyxf('pattern: pattern 0x04, fore-colour gray25; borders: top thin')
 sty_sender_green = xlwt.easyxf('pattern: pattern 0x04, fore-colour gray25, back-colour light_green')
 sty_sender_green_first_frame = xlwt.easyxf('pattern: pattern 0x04, fore-colour gray25, back-colour light_green; borders: top thin')
+sty_sender_blue = xlwt.easyxf('pattern: pattern 0x04, fore-colour gray25, back-colour light_blue')
+sty_sender_blue_first_frame = xlwt.easyxf('pattern: pattern 0x04, fore-colour gray25, back-colour light_blue; borders: top thin')
 
 def writeFrame(frame, worksheet, row, mystyle):
     #frame-id
@@ -182,6 +186,34 @@ def writeSignal(db, sig, worksheet, row, mystyle, rearCol, motorolaBitFormat):
         else:
             worksheet.write(row, rearCol+2, label = "", style=mystyle)
 
+    #custom attributes
+    aCol = rearCol +2
+    for aName in db._signalDefines:
+        aCol += 1
+        if aName in sig._attributes:
+            val = sig._attributes[aName]
+        else:
+            val = db._signalDefines[aName]._defaultValue
+        if db._signalDefines[aName]._type == 'HEX':
+            val = int(val) & (2**sig._signalsize-1)
+            if sig._signalsize <= 8:
+                val = '%02Xh' % (val)
+            elif sig._signalsize <= 16:
+                val = '%04Xh' % (val)
+            elif sig._signalsize <= 24:
+                val = '%06Xh' % (val)
+            elif sig._signalsize <= 32:
+                val = '%08Xh' % (val)
+            else:
+                val = '%Xh' % (int(val))
+
+        worksheet.write(row, aCol, label=val, style=mystyle)
+            
+#    print(sig)
+#    print('attr', sig._attributes)
+#    for key, val in sig._attributes.iteritems():
+#        print(key, val)
+
 def writeValue(label, value, worksheet, row, rearCol, mystyle):
     # write value and lable in sheet
     worksheet.write(row, rearCol, label = label, style=mystyle)
@@ -192,14 +224,14 @@ def writeBuMatrix(buList, sig, frame, worksheet, row, col, firstframe):
     if firstframe == sty_first_frame:
         norm = sty_first_frame
         sender = sty_sender_first_frame
-        norm_green = sty_green_first_frame
-        sender_green = sty_sender_green_first_frame
+        norm_green = sty_blue_first_frame
+        sender_green = sty_sender_blue_first_frame
     # consecutive-frame - style without borders:
     else:
         norm = sty_norm
         sender = sty_sender
-        norm_green = sty_green
-        sender_green = sty_sender_green
+        norm_green = sty_blue
+        sender_green = sty_sender_blue
 
     #iterate over boardunits:
     for bu in buList:
@@ -227,7 +259,12 @@ def writeBuMatrix(buList, sig, frame, worksheet, row, col, firstframe):
 
 def exportXls(db, filename, **options):
     head_top = ['ID', 'Frame Name', 'Cycle Time [ms]', 'Launch Type', 'Launch Parameter', 'Signal Byte No.', 'Signal Bit No.', 'Signal Name', 'Signal Function', 'Signal Length [Bit]', 'Signal Default', ' Signal Not Available', 'Byteorder']
-    head_tail = ['Value',   'Name / Phys. Range', 'Function / Increment Unit']
+    head_tail = ['Value',   'Name / Phys. Range', 'Unit']
+
+    for key, val in db._signalDefines.iteritems():
+        print(key, val)
+        head_tail.append(key)
+
 
     if 'xlsMotorolaBitFormat' in options:
         motorolaBitFormat = options["xlsMotorolaBitFormat"]
@@ -262,6 +299,7 @@ def exportXls(db, filename, **options):
         col += 1
 
     # set width of selected Cols
+    worksheet.col(0).width = 2000
     worksheet.col(1).width = 5555
     worksheet.col(3).width = 3333
     worksheet.col(7).width = 5555
@@ -269,6 +307,7 @@ def exportXls(db, filename, **options):
     worksheet.col(head_start).width = 1111
     worksheet.col(head_start+1).width = 5555
 
+    worksheet.row(0).height = 2000
 
     frameHash = {}
     for frame in db._fl._list:
